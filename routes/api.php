@@ -22,13 +22,13 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // Authenticated routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:api')->group(function () {
     // Logout route
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // Change password routes
-    Route::post('/change-password', [AuthController::class, 'changePassword']);
-    Route::post('/change-password/{id}', [AuthController::class, 'changeUserPassword']);
+    Route::post('/users/change-password', [AuthController::class, 'changePassword']);
+    Route::post('/users/{id}/change-password', [AuthController::class, 'changeUserPassword']);
 
     // Ping route
     Route::get('/ping', [UserController::class, 'ping'])->name('user.ping');
@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users', [UserController::class, 'GetAllUsers'])->name('user.index');
     Route::get('/users/{id}', [UserController::class, 'UserDetails'])->name('user.show');
     Route::put('/users/{id}', [UserController::class, 'UpdateUser'])->name('user.update');
+    Route::put('/users/{id}/make-admin', [UserController::class, 'makeAdmin'])->name('user.makeAdmin');
     Route::delete('/users/{id}', [UserController::class, 'DeleteUser'])->name('user.destroy');
 
     // Account routes

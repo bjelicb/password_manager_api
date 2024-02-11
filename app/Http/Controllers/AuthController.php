@@ -7,6 +7,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthController extends Controller
 {
@@ -47,21 +49,17 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        // Validate input
-        if (Auth::attempt($request->only('email', 'password'))) {
-            $user = Auth::user();
+        $credentials = $request->only('email', 'password');
 
-            // Invalidate all previous tokens
-            $user->tokens()->delete();
-
-            // Create a new token
-            $token = $user->createToken('authToken')->plainTextToken;
-            
-            // Return response with token
-            return response()->json(['message' => 'Successful login', 'token' => $token], 200);
+        try {
+            if (! $token = JWTAuth::attempt($credentials)) {
+                return response()->json(['error' => 'Invalid credentials'], 401);
+            }
+        } catch (JWTException $e) {
+            return response()->json(['error' => 'could_not_create_token'], 500);
         }
 
-        return response()->json(['message' => 'Unauthorized'], 401);
+        return response()->json(['message' => 'Successful login', 'token' => $token], 200);
     }
 
     /**
@@ -72,8 +70,8 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        // Assuming you are using Laravel Sanctum for authentication
-        $request->user()->currentAccessToken()->delete();
+        
+        auth()->logout();
 
         return response()->json(['message' => 'Successfully logged out'], 200);
     }
@@ -100,7 +98,7 @@ class AuthController extends Controller
 
             // Check if current password is correct
             if (!Hash::check($request->current_password, Auth::user()->password)) {
-                throw new Exception('Current password is incorrect', 403);
+                throw new Exception('Current password is incorrect', 401);
             }
 
             // Change password
@@ -132,18 +130,13 @@ class AuthController extends Controller
 
             // Check if user is admin
             if (Auth::user()->role !== 'admin') {
-                throw new Exception('Locked', 403);
+                throw new Exception('Unauthorized', 401);
             }
 
             // Validate input
             $request->validate([
                 'password' => 'required|string|confirmed',
             ]);
-
-            // Check if new password and confirmation match
-            if ($request->password !== $request->password_confirmation) {
-                throw new Exception('Passwords do not match', 422);
-            }
 
             // Change password
             $user->update([

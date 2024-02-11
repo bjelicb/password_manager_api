@@ -65,4 +65,16 @@ class UserControllerTest extends TestCase
         $this->assertSoftDeleted('users', ['id' => $user->id]);
     }
 
+    /** @test */
+    public function it_can_make_user_an_admin()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($admin)->putJson('/api/users/' . $user->id . '/make-admin');
+
+        $response->assertStatus(200);
+        $this->assertEquals('admin', $user->fresh()->role);
+    }
+
 }

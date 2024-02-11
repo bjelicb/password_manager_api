@@ -17,7 +17,7 @@ class CreateAccountsTable extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->string('website_url')->nullable();
+            $table->string('location_url')->nullable();
             $table->string('username')->nullable();
             $table->string('password');
             $table->text('note')->nullable();

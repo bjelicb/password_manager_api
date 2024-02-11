@@ -13,18 +13,17 @@ use Illuminate\Contracts\Auth\Factory as AuthFactory;
 
 class UserController extends Controller
 {
-    private $auth;
 
     /**
-     * Create a new UserController instance.
+     * Initialize UserController.
      *
-     * @param  \Illuminate\Contracts\Auth\Authenticatable  $auth
-     * @return void
+     * Applies JWT authentication middleware to all controller actions to ensure
+     * that only authenticated users can access them. The 'auth:api' middleware
+     * leverages JWT (JSON Web Tokens) for user authentication checks.
      */
-    public function __construct(AuthFactory $auth)
+    public function __construct()
     {
-        $this->auth = $auth->guard('sanctum');
-        $this->middleware('auth:sanctum');
+        $this->middleware('auth:api');
     }
 
     /**
@@ -52,10 +51,8 @@ class UserController extends Controller
     {
         try {
             $user = User::findOrFail($id);
-            if ($this->checkUserRole($id)) {
+            if ($this->checkIfUserCanAccess($id)) {
                 return response()->json($user);
-            } else {
-                return response()->json(['error' => 'Locked'], 403);
             }
         } catch (Exception $e) {
             return $this->handleException($e);
@@ -73,12 +70,11 @@ class UserController extends Controller
     {
         try {
             $user = User::findOrFail($id);
-            if ($this->checkUserRole($id)) {
+            if ($this->checkIfUserCanAccess($id)) {
                 $data = $request->except('password');
+                $data = $request->except('role');
                 $user->update($data);
                 return response()->json($user, 200);
-            } else {
-                return response()->json(['error' => 'Locked'], 403);
             }
         } catch (Exception $e) {
             return $this->handleException($e);
@@ -100,9 +96,7 @@ class UserController extends Controller
                 return response()->json(['error' => 'Admin users cannot be deleted'], 403);
             }
 
-            if (!$this->checkUserRole($id)) {
-                return response()->json(['error' => 'Unauthorized'], 403);
-            }
+            $this->checkIfUserCanAccess($id);
 
             $user->delete();
             
@@ -118,12 +112,12 @@ class UserController extends Controller
      * @param  int  $id
      * @return bool
      */
-    private function checkUserRole($id)
+    private function checkIfUserCanAccess($id)
     {
         if (Auth::user()->role === 'admin' || Auth::id() == $id) {
             return true;
         } else {
-            return false;
+            throw new \Exception('Unauthorized', 401);
         }
     }
 
@@ -139,6 +133,25 @@ class UserController extends Controller
         $code = ($e instanceof ModelNotFoundException) ? 404 : ($e->getCode() ?: 500);
 
         return response()->json(['error' => 'Operation failed.', 'message' => $message], $code);
+    }
+
+    /**
+     * Make user an admin.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function makeAdmin($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            
+            $user->update(['role' => 'admin']);
+            
+            return response()->json(['message' => 'User is now an admin'], 200);
+        } catch (Exception $e) {
+            return $this->handleException($e);
+        }
     }
 
     /**

@@ -30,7 +30,7 @@ class Handler extends ExceptionHandler
      */
     protected function unauthenticated($request, AuthenticationException $exception)
     {
-        return response()->json(['error' => 'Login first!'], 403);
+        return response()->json(['error' => 'Unauthorized.'], 401);
     }
 
 }

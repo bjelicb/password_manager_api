@@ -15,15 +15,15 @@ class AccountController extends Controller
     private $auth;
 
     /**
-     * Create a new AccountController instance.
+     * Initialize UserController.
      *
-     * @param  \Illuminate\Contracts\Auth\Factory  $auth
-     * @return void
+     * Applies JWT authentication middleware to all controller actions to ensure
+     * that only authenticated users can access them. The 'auth:api' middleware
+     * leverages JWT (JSON Web Tokens) for user authentication checks.
      */
-    public function __construct(AuthFactory $auth)
+    public function __construct()
     {
-        $this->auth = $auth->guard('sanctum');
-        $this->middleware('auth:sanctum');
+        $this->middleware('auth:api');
     }
 
     /**
@@ -53,7 +53,7 @@ class AccountController extends Controller
         $account = Account::findOrFail($accountId);
         
         if (Auth::user()->role !== 'admin' && Auth::user()->id !== $account->user_id) {
-            throw new Exception('You do not have permission to access this account.', 403);
+            throw new Exception('You do not have permission to access this account.', 401);
         }
         
         return $account;
@@ -141,12 +141,8 @@ class AccountController extends Controller
     public function updateAccount(Request $request, $id)
     {
         try {
-            $user = Auth::user();
-            $account = Account::findOrFail($id);
 
-            if ($user->id != $account->user_id && $user->role !== 'admin') {
-                throw new Exception('You do not have permission to update this account.', 403);
-            }
+            $account = $this->checkIfUserCanAccess($id);
 
             $data = $request->except('password');
             $account->update($data);
@@ -169,13 +165,8 @@ class AccountController extends Controller
     public function resetPassword(Request $request, $id)
     {
         try {
-            $user = Auth::user();
-            $account = Account::findOrFail($id);
-
-            // Provera dozvola vlasnika naloga
-            if ($user->role !== 'admin' && $user->id !== $account->user_id) {
-                throw new Exception('You do not have permission to reset password for this account.', 403);
-            }
+            
+            $account = $this->checkIfUserCanAccess($id);
 
             $request->validate([
                 'password' => 'required|string|min:6|confirmed'
@@ -183,12 +174,10 @@ class AccountController extends Controller
 
             $currentPasswordDecrypted = decrypt($account->password);
 
-            // Provera podudaranja lozinki
             if ($request->password === $currentPasswordDecrypted) {
                 throw new Exception('New password must be different from the current password.', 422);
             }
 
-            // Ažuriranje naloga sa enkriptovanom novom lozinkom
             $account->update([
                 'password' => encrypt($request->password),
             ]);

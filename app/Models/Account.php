@@ -18,7 +18,7 @@ class Account extends Model
     protected $fillable = [
         'user_id',
         'name',
-        'website_url',
+        'location_url',
         'username',
         'password',
         'note',

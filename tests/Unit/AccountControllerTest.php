@@ -111,6 +111,6 @@ class AccountControllerTest extends TestCase
             'password_confirmation' => 'newpassword'
         ]);
 
-        $response->assertStatus(403);
+        $response->assertStatus(401);
     }
 }

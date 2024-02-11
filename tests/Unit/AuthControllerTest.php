@@ -41,22 +41,32 @@ class AuthControllerTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure(['message', 'token']);
+                 ->assertJsonStructure(['token', 'token']);
     }
 
     /** @test */
     public function test_logout_destroys_token()
     {
-        $user = User::factory()->create();
 
-        $token = $user->createToken('authToken')->plainTextToken;
+        $user = User::factory()->create([
+            'email' => 'user@example.com',
+            'password' => Hash::make('password'),
+        ]);
+
+        $loginResponse = $this->postJson('/api/login', [
+            'email' => 'user@example.com',
+            'password' => 'password',
+        ]);
+
+        $token = $loginResponse->json('token');
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
-                         ->postJson('/api/logout');
+                        ->postJson('/api/logout');
 
         $response->assertStatus(200)
-                 ->assertJson(['message' => 'Successfully logged out']);
+                ->assertJson(['message' => 'Successfully logged out']);
     }
+
 
     /** @test */
     public function test_change_password_changes_user_password()
@@ -65,7 +75,7 @@ class AuthControllerTest extends TestCase
             'password' => Hash::make('oldpassword'),
         ]);
 
-        $response = $this->actingAs($user)->postJson('/api/change-password', [
+        $response = $this->actingAs($user)->postJson('/api/users/change-password', [
             'current_password' => 'oldpassword',
             'password' => $newPassword = 'newpassword',
             'password_confirmation' => $newPassword,
